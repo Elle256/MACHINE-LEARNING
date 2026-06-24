@@ -41,6 +41,7 @@ done
 export CUDA_VISIBLE_DEVICES="$GPU"
 
 # ─── Paths ───────────────────────────────────────────────────────────────────
+# ─── Paths ──────────────────────────────────────────────────────────────
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 WORK_DIR="/kaggle/working/fl_dta"
@@ -48,6 +49,10 @@ WORK_DIR="/kaggle/working/fl_dta"
 RESULTS_DIR="$WORK_DIR/results"
 FIGURES_DIR="$WORK_DIR/figures"
 LOG_DIR="$WORK_DIR/logs"
+
+# DATA
+DATA_DIR="$SCRIPT_DIR/data/raw"
+CONFIG="$SCRIPT_DIR/configs/default.yaml"
 
 mkdir -p "$RESULTS_DIR" "$FIGURES_DIR" "$LOG_DIR"
 
