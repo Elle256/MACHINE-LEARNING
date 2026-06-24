@@ -106,7 +106,7 @@ fi
 
 SEED=42
 NUM_CLIENTS=5          # số pharma clients (5 = mô phỏng thực tế hợp lý)
-ROUNDS=100             # số FL communication rounds
+ROUNDS=150             # số FL communication rounds
 LOCAL_EPOCHS=5         # số epochs local mỗi round (đủ để hội tụ, không overfit)
 LOCAL_BS=256           # local batch size
 LR=0.001               # Adam lr (paper DeepDTA dùng 0.001)
@@ -115,27 +115,8 @@ FRACTION_FIT=1.0       # tất cả clients tham gia mỗi round (N=5, nhỏ nê
 LOG_EVERY=10           # log mỗi 10 rounds
 BATCH_SIZE=1024
 
-# ─── 1. Centralized baseline ─────────────────────────────────────────────────
-log "Bắt đầu [1/5]: Centralized baseline (${DATASET})..."
-
-python "$SCRIPT_DIR/train_centralized.py" \
-    --dataset        "$DATASET"       \
-    --epochs         100              \
-    --batch_size     "$BATCH_SIZE"    \
-    --lr             "$LR"            \
-    --weight_decay   "$WEIGHT_DECAY"  \
-    --seed           "$SEED"          \
-    --device         "$DEVICE"        \
-    --data_dir       "$DATA_DIR"      \
-    --results_dir    "$RESULTS_DIR"   \
-    --config         "$CONFIG"        \
-    --log_every      5                \
-    2>&1 | tee "$LOG_DIR/centralized_${DATASET}.log"
-
-ok "Centralized xong."
-
 # ─── 2. FedAvg – IID ─────────────────────────────────────────────────────────
-log "Bắt đầu [2/5]: FedAvg IID (${DATASET}, ${NUM_CLIENTS} clients)..."
+log "Bắt đầu [1/5]: FedAvg IID (${DATASET}, ${NUM_CLIENTS} clients)..."
 
 python "$SCRIPT_DIR/train_federated.py" \
     --dataset        "$DATASET"       \
