@@ -22,7 +22,7 @@ set -euo pipefail   # dung ngay neu co loi
 # Force UTF-8 trên Windows (tránh cp1252 encoding error)
 export PYTHONUTF8=1
 export PYTHONIOENCODING=utf-8
-
+export PYTHONWARNINGS="ignore"
 
 # ─── Parse flags ─────────────────────────────────────────────────────────────
 DATASET="davis"
@@ -109,11 +109,6 @@ WEIGHT_DECAY=1e-4
 FRACTION_FIT=1.0       # tất cả clients tham gia mỗi round (N=5, nhỏ nên dùng full)
 LOG_EVERY=10           # log mỗi 10 rounds
 BATCH_SIZE=1024
-
-# UTF-8 + suppress warnings
-export PYTHONUTF8=1
-export PYTHONIOENCODING=utf-8
-export PYTHONWARNINGS="ignore"
 
 # ─── 1. Centralized baseline ─────────────────────────────────────────────────
 log "Bắt đầu [1/5]: Centralized baseline (${DATASET})..."
