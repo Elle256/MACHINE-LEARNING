@@ -42,11 +42,12 @@ export CUDA_VISIBLE_DEVICES="$GPU"
 
 # ─── Paths ───────────────────────────────────────────────────────────────────
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-RESULTS_DIR="$SCRIPT_DIR/results"
-FIGURES_DIR="$SCRIPT_DIR/figures"
-LOG_DIR="$SCRIPT_DIR/logs"
-DATA_DIR="$SCRIPT_DIR/data/raw"
-CONFIG="$SCRIPT_DIR/configs/default.yaml"
+
+WORK_DIR="/kaggle/working/fl_dta"
+
+RESULTS_DIR="$WORK_DIR/results"
+FIGURES_DIR="$WORK_DIR/figures"
+LOG_DIR="$WORK_DIR/logs"
 
 mkdir -p "$RESULTS_DIR" "$FIGURES_DIR" "$LOG_DIR"
 
@@ -99,7 +100,6 @@ fi
 # (Được chọn theo chuẩn DeepDTA paper + FL best practices)
 
 SEED=42
-BATCH_SIZE=512         # centralized batch size
 NUM_CLIENTS=5          # số pharma clients (5 = mô phỏng thực tế hợp lý)
 ROUNDS=100             # số FL communication rounds
 LOCAL_EPOCHS=5         # số epochs local mỗi round (đủ để hội tụ, không overfit)
@@ -108,6 +108,12 @@ LR=0.001               # Adam lr (paper DeepDTA dùng 0.001)
 WEIGHT_DECAY=1e-4
 FRACTION_FIT=1.0       # tất cả clients tham gia mỗi round (N=5, nhỏ nên dùng full)
 LOG_EVERY=10           # log mỗi 10 rounds
+BATCH_SIZE=1024
+
+# UTF-8 + suppress warnings
+export PYTHONUTF8=1
+export PYTHONIOENCODING=utf-8
+export PYTHONWARNINGS="ignore"
 
 # ─── 1. Centralized baseline ─────────────────────────────────────────────────
 log "Bắt đầu [1/5]: Centralized baseline (${DATASET})..."
@@ -152,32 +158,8 @@ python "$SCRIPT_DIR/train_federated.py" \
 
 ok "FedAvg IID xong."
 
-# ─── 3. FedAvg – Non-IID kinase-based ────────────────────────────────────────
-log "Bắt đầu [3/5]: FedAvg Non-IID kinase (${DATASET}, ${NUM_CLIENTS} clients)..."
-
-python "$SCRIPT_DIR/train_federated.py" \
-    --dataset        "$DATASET"       \
-    --partition      non_iid          \
-    --num_clients    "$NUM_CLIENTS"   \
-    --rounds         "$ROUNDS"        \
-    --local_epochs   "$LOCAL_EPOCHS"  \
-    --local_bs       "$LOCAL_BS"      \
-    --lr             "$LR"            \
-    --weight_decay   "$WEIGHT_DECAY"  \
-    --fraction_fit   "$FRACTION_FIT"  \
-    --batch_size     "$BATCH_SIZE"    \
-    --seed           "$SEED"          \
-    --device         "$DEVICE"        \
-    --data_dir       "$DATA_DIR"      \
-    --results_dir    "$RESULTS_DIR"   \
-    --config         "$CONFIG"        \
-    --log_every      "$LOG_EVERY"     \
-    2>&1 | tee "$LOG_DIR/fedavg_noniid_${DATASET}.log"
-
-ok "FedAvg Non-IID kinase xong."
-
 # ─── 4. FedAvg – Non-IID Dirichlet alpha=0.5 (mild heterogeneity) ────────────
-log "Bắt đầu [4/5]: FedAvg Dirichlet α=0.5 (${DATASET})..."
+log "Bắt đầu [3/5]: FedAvg Dirichlet α=0.5 (${DATASET})..."
 
 python "$SCRIPT_DIR/train_federated.py" \
     --dataset        "$DATASET"       \
@@ -200,31 +182,6 @@ python "$SCRIPT_DIR/train_federated.py" \
     2>&1 | tee "$LOG_DIR/fedavg_dirichlet05_${DATASET}.log"
 
 ok "FedAvg Dirichlet α=0.5 xong."
-
-# ─── 5. FedAvg – Non-IID Dirichlet alpha=0.1 (severe heterogeneity) ──────────
-log "Bắt đầu [5/5]: FedAvg Dirichlet α=0.1 (${DATASET}, severe Non-IID)..."
-
-python "$SCRIPT_DIR/train_federated.py" \
-    --dataset        "$DATASET"       \
-    --partition      dirichlet        \
-    --alpha          0.1              \
-    --num_clients    "$NUM_CLIENTS"   \
-    --rounds         "$ROUNDS"        \
-    --local_epochs   "$LOCAL_EPOCHS"  \
-    --local_bs       "$LOCAL_BS"      \
-    --lr             "$LR"            \
-    --weight_decay   "$WEIGHT_DECAY"  \
-    --fraction_fit   "$FRACTION_FIT"  \
-    --batch_size     "$BATCH_SIZE"    \
-    --seed           "$SEED"          \
-    --device         "$DEVICE"        \
-    --data_dir       "$DATA_DIR"      \
-    --results_dir    "$RESULTS_DIR"   \
-    --config         "$CONFIG"        \
-    --log_every      "$LOG_EVERY"     \
-    2>&1 | tee "$LOG_DIR/fedavg_dirichlet01_${DATASET}.log"
-
-ok "FedAvg Dirichlet α=0.1 xong."
 
 # ─── 6. Phân tích & vẽ biểu đồ ──────────────────────────────────────────────
 log "Phân tích kết quả và vẽ biểu đồ..."
