@@ -22,7 +22,7 @@ set -euo pipefail   # dung ngay neu co loi
 # Force UTF-8 trên Windows (tránh cp1252 encoding error)
 export PYTHONUTF8=1
 export PYTHONIOENCODING=utf-8
-export PYTHONWARNINGS="ignore"
+export PYTHONWARNINGS="ignore::DeprecationWarning"
 
 # ─── Parse flags ─────────────────────────────────────────────────────────────
 DATASET="davis"
@@ -118,7 +118,7 @@ BATCH_SIZE=1024
 # ─── 2. FedAvg – IID ─────────────────────────────────────────────────────────
 log "Bắt đầu [1/5]: FedAvg IID (${DATASET}, ${NUM_CLIENTS} clients)..."
 
-python "$SCRIPT_DIR/train_federated.py" \
+python  -W ignore "$SCRIPT_DIR/train_federated.py" \
     --dataset        "$DATASET"       \
     --partition      iid              \
     --num_clients    "$NUM_CLIENTS"   \
