@@ -1,7 +1,5 @@
-# FL-DTA Default Configuration
-
 # Dataset
-dataset: davis           # "davis" hoac "kiba"
+dataset: davis           
 data_dir: ./data/raw
 
 # Model architecture
@@ -26,7 +24,7 @@ model:
 # Training
 seed: 42
 batch_size: 512
-lr: 0.001
+lr: 0.01
 weight_decay: 1e-4
 
 # Centralized training
@@ -40,7 +38,7 @@ federated:
   fraction_fit: 1.0
   rounds: 100
   local_epochs: 5
-  local_bs: 256
+  local_bs: 512
   dropout_rate: 0.0
 
 # Data partition

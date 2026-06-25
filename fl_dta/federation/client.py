@@ -20,18 +20,6 @@ from data.dataset import DTADataset
 
 
 class LocalUpdate:
-    """
-    Local trainer cho một FL client (FedAvg).
-
-    Parameters
-    ----------
-    args        : Namespace / object có các thuộc tính:
-                    lr, local_epochs, local_bs, device
-    dataset     : DTADataset toàn bộ (sẽ lấy subset theo idxs)
-    idxs        : List[int] – indices thuộc về client này
-    client_id   : int (dùng cho logging)
-    """
-
     def __init__(
         self,
         args,
@@ -49,24 +37,16 @@ class LocalUpdate:
             batch_size=args.local_bs,
             shuffle=True,
             collate_fn=DTADataset.collate_fn,
-            drop_last=len(subset) > args.local_bs,  # tránh batch size = 1 gây lỗi BN
+            drop_last=len(subset) > args.local_bs,  
         )
 
         self.loss_fn = nn.MSELoss()
 
-    # ─── Public API ──────────────────────────────────────────────────────────
 
     def train(
         self, global_model: nn.Module
     ) -> Tuple[Dict[str, np.ndarray], float]:
-        """
-        Train local model từ global weights.
 
-        Returns
-        -------
-        state_dict_numpy : dict {param_name: numpy array}
-        avg_loss         : float
-        """
         model = copy.deepcopy(global_model).to(self.device)
         model.train()
 
@@ -98,8 +78,6 @@ class LocalUpdate:
                 epoch_losses.append(np.mean(batch_losses))
 
         avg_loss = float(np.mean(epoch_losses)) if epoch_losses else 0.0
-
-        # Trả về numpy để dễ aggregate (tránh GPU tensor leak)
         state_numpy = {
             k: v.cpu().numpy()
             for k, v in model.state_dict().items()

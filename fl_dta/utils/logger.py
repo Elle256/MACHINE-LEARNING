@@ -1,12 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-utils/logger.py
-----------------
-Logger hỗ trợ:
-  - CSV file (luôn bật)
-  - WandB (tuỳ chọn)
-"""
-
 from __future__ import annotations
 
 import csv
@@ -17,18 +8,6 @@ from typing import Dict, Optional
 
 
 class Logger:
-    """
-    Ghi log metrics ra CSV và optionally WandB.
-
-    Parameters
-    ----------
-    results_dir : thư mục lưu kết quả
-    run_name    : tên run (dùng làm tên file/wandb run)
-    use_wandb   : bật WandB không
-    project     : WandB project name
-    config      : dict config để log lên WandB
-    """
-
     def __init__(
         self,
         results_dir: str = "./results",
@@ -94,7 +73,6 @@ class Logger:
 
 
 def make_run_name(args) -> str:
-    """Tạo run name từ args để dễ phân biệt các experiment."""
     parts = [
         args.dataset,
         getattr(args, "mode", "fedavg"),

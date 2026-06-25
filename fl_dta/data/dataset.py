@@ -1,16 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-data/dataset.py
----------------
-Davis / KIBA dataset loader và preprocessing.
-
-Davis  : Ki (nM) → pKd = -log10(Ki/1e9)  [0 ~ 10.8]
-KIBA   : KIBA score                        [0 ~ ~17]
-
-Drug   : SMILES → PyG graph (atom features + bond features)
-Protein: Sequence → integer-encoded tensor (length 1000, zero-padded)
-"""
-
 import os
 import pickle
 import urllib.request
@@ -23,22 +10,15 @@ import torch
 from torch.utils.data import Dataset
 from torch_geometric.data import Data, Batch
 
-# ─── Amino acid vocabulary ────────────────────────────────────────────────────
-AMINO_ACIDS = (
-    "ACDEFGHIKLMNPQRSTVWY"  # 20 standard amino acids
-)
+# Amino acid
+AMINO_ACIDS = ("ACDEFGHIKLMNPQRSTVWY")
 AA_TO_IDX: Dict[str, int] = {aa: i + 1 for i, aa in enumerate(AMINO_ACIDS)}
-# 0 = padding, 1–20 = amino acids, 21 = unknown
-
 
 def encode_protein(seq: str, max_len: int = 1000) -> torch.LongTensor:
-    """Encode protein sequence thành integer tensor, zero-pad về max_len."""
     encoded = [AA_TO_IDX.get(aa, 21) for aa in seq[:max_len]]
     padded = encoded + [0] * (max_len - len(encoded))
     return torch.tensor(padded, dtype=torch.long)
 
-
-# ─── Drug featurization (SMILES → PyG graph) ─────────────────────────────────
 try:
     from rdkit import Chem
     from rdkit.Chem import AllChem
@@ -65,7 +45,6 @@ ATOM_FEATURES = {
 
 
 def _one_hot(value, choices):
-    """One-hot encode với bucket 'other' ở cuối."""
     enc = [0] * (len(choices) + 1)
     if value in choices:
         enc[choices.index(value)] = 1
@@ -75,10 +54,6 @@ def _one_hot(value, choices):
 
 
 def smiles_to_graph(smiles: str) -> Optional[Data]:
-    """Chuyển SMILES thành PyG Data object."""
-    if not RDKIT_AVAILABLE:
-        raise RuntimeError("RDKit không được cài. pip install rdkit-pypi")
-
     mol = Chem.MolFromSmiles(smiles)
     if mol is None:
         return None
@@ -99,7 +74,6 @@ def smiles_to_graph(smiles: str) -> Optional[Data]:
 
     x = torch.tensor(node_feats, dtype=torch.float)
 
-    # Edge index (undirected)
     edge_index = []
     for bond in mol.GetBonds():
         i, j = bond.GetBeginAtomIdx(), bond.GetEndAtomIdx()
@@ -113,18 +87,7 @@ def smiles_to_graph(smiles: str) -> Optional[Data]:
     return Data(x=x, edge_index=edge_index)
 
 
-# ─── DTADataset ───────────────────────────────────────────────────────────────
-
 class DTADataset(Dataset):
-    """
-    Dataset cho Drug-Target Affinity.
-
-    Mỗi sample: (drug_graph, protein_tensor, affinity_score)
-    drug_graph : torch_geometric.data.Data
-    protein    : torch.LongTensor  shape (max_seq_len,)
-    label      : torch.FloatTensor scalar
-    """
-
     def __init__(
         self,
         drug_smiles: List[str],
@@ -136,7 +99,6 @@ class DTADataset(Dataset):
         self.max_protein_len = max_protein_len
         self.labels = torch.tensor(labels, dtype=torch.float32)
 
-        # Cache drug graphs để không phải tính lại
         cache_path = Path(cache_dir) / "drug_graphs.pkl" if cache_dir else None
         if cache_path and cache_path.exists():
             with open(cache_path, "rb") as f:
@@ -154,7 +116,6 @@ class DTADataset(Dataset):
             encode_protein(seq, max_protein_len) for seq in protein_seqs
         ]
 
-        # Lọc invalid drug graphs
         valid_mask = [g is not None for g in self.drug_graphs]
         if not all(valid_mask):
             n_invalid = sum(1 for v in valid_mask if not v)
@@ -171,7 +132,6 @@ class DTADataset(Dataset):
 
     @staticmethod
     def collate_fn(batch):
-        """Custom collate để batch PyG graphs."""
         drug_graphs, proteins, labels = zip(*batch)
         batched_drugs = Batch.from_data_list(list(drug_graphs))
         proteins = torch.stack(proteins)
@@ -197,45 +157,23 @@ def _download_if_needed(url: str, dest: Path):
 
 
 def _load_affinity_matrix(path: Path) -> np.ndarray:
-    """
-    Load affinity matrix file Y từ DeepDTA repo.
-    File này là Python 2 pickle (binary), không phải .npy,
-    nên cần dùng pickle.load với encoding='latin1'.
-    Fallback thêm cho numpy format phòng trường hợp repo thay đổi.
-    """
     import pickle
-
-    # Thử pickle trước (Python 2 pickle dùng latin1)
     try:
         with open(path, "rb") as f:
             obj = pickle.load(f, encoding="latin1")
         return np.array(obj, dtype=np.float32)
     except Exception:
         pass
-
-    # Fallback: numpy format
     try:
         return np.load(path, allow_pickle=True).astype(np.float32)
     except Exception:
         pass
-
-    # Fallback cuối: pickle không encoding
     with open(path, "rb") as f:
         obj = pickle.load(f)
     return np.array(obj, dtype=np.float32)
 
 
 def load_davis(data_dir: str = "./data/raw") -> Tuple[List, List, List, pd.DataFrame]:
-    """
-    Load Davis dataset.
-
-    Returns
-    -------
-    drug_smiles   : List[str]
-    protein_seqs  : List[str]
-    labels        : List[float]  (pKd values)
-    meta_df       : pd.DataFrame với cột [drug_id, protein_id, kinase_family, label]
-    """
     base = Path(data_dir) / "davis"
     base.mkdir(parents=True, exist_ok=True)
 
@@ -244,7 +182,6 @@ def load_davis(data_dir: str = "./data/raw") -> Tuple[List, List, List, pd.DataF
     proteins_file = base / "proteins.txt"
     affinity_file = base / "Y"
 
-    # Download nếu chưa có
     _download_if_needed(DAVIS_URL + "ligands_can.txt", ligands_file)
     _download_if_needed(DAVIS_URL + "proteins.txt", proteins_file)
     _download_if_needed(DAVIS_URL + "Y", affinity_file)
@@ -268,8 +205,7 @@ def load_davis(data_dir: str = "./data/raw") -> Tuple[List, List, List, pd.DataF
     for di, dname in enumerate(drug_names):
         for pi, pname in enumerate(protein_names):
             affinity = Y[di][pi]
-            if affinity != 0:  # 0 = missing value trong Davis
-                # Davis dùng Ki (nM) → pKd
+            if affinity != 0:  
                 pkd = -np.log10(affinity / 1e9)
                 drug_smiles_list.append(ligands[dname])
                 protein_seqs_list.append(proteins[pname])
@@ -290,7 +226,6 @@ def load_davis(data_dir: str = "./data/raw") -> Tuple[List, List, List, pd.DataF
 
 
 def load_kiba(data_dir: str = "./data/raw") -> Tuple[List, List, List, pd.DataFrame]:
-    """Load KIBA dataset tương tự Davis."""
     base = Path(data_dir) / "kiba"
     base.mkdir(parents=True, exist_ok=True)
 
@@ -337,16 +272,15 @@ def load_kiba(data_dir: str = "./data/raw") -> Tuple[List, List, List, pd.DataFr
 
 
 def load_dataset(dataset: str, data_dir: str = "./data/raw"):
-    """Wrapper chọn dataset."""
     if dataset.lower() == "davis":
         return load_davis(data_dir)
     elif dataset.lower() == "kiba":
         return load_kiba(data_dir)
     else:
-        raise ValueError(f"Dataset không hỗ trợ: {dataset}. Chọn 'davis' hoặc 'kiba'.")
+        raise ValueError(f"Error")
 
 
-# ─── Kinase family inference (heuristic) ─────────────────────────────────────
+# Kinase family 
 
 KINASE_FAMILY_KEYWORDS = {
     "CDK": "CDK",
