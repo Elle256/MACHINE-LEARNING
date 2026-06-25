@@ -1,8 +1,0 @@
-__pycache__/
-*.pyc
-
-fl_dta/data/raw/*/cache/
-*.pkl
-
-results/
-wandb/
